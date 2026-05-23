@@ -19,7 +19,7 @@ function buildPrompt(n: number): string {
 4. Camera movement: static / push-in / pull-out / pan / follow / handheld (infer from adjacent frames)
 
 Use [Frame N] as heading for each frame. Keep it concise — max 2 sentences per item.
-Note: If a frame contains violence, conflict, or disturbing content, describe the scene and atmosphere in a neutral, objective tone without graphic details.`
+Note: If a frame contains violence, conflict, or disturbing content, describe the scene and atmosphere in a neutral, objective tone without graphic details. Avoid words like: blood, gore, wound, rotting, corpse, dead, kill, flesh, weapon, knife, gun. Use cinematic equivalents instead (e.g. "dramatic shadows" instead of "blood stains", "still figures" instead of "bodies", "tense confrontation" instead of "fight").`
 }
 
 /**

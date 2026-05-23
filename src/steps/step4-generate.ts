@@ -11,12 +11,18 @@ const TEMPERATURE = 0.2  // 低温度，输出更稳定可控
 
 /** Content safety guidelines shared by all generation functions */
 const SAFETY_GUIDELINES = `
-Content Safety Guidelines (must follow):
-- Do NOT include graphic violence, gore, explicit sexual content, hate speech, or other policy-violating content
-- If the source video contains violence or conflict, describe it artistically and cinematically (e.g. "tense confrontation" instead of explicit violence)
-- If the source video contains disturbing imagery (bodies, injuries, etc.), use atmospheric hints instead of direct descriptions (e.g. "aftermath", "fallen figures", "somber scene")
-- All prompts must comply with content policies of mainstream AI platforms (Stable Diffusion / MidJourney / DALL-E)
-- Focus on: composition, lighting, color palette, atmosphere, character poses — not graphic or violent details
+Content Safety Guidelines (MUST follow strictly):
+- NEVER use words like: blood, bloody, gore, wound, rotting, decay, corpse, death, dead, kill, murder, stab, shoot, gun, weapon, knife, flesh, mutilate, dismember, entrails, viscera, violent, brutal, torture
+- Replace violent/disturbing concepts with safe cinematic equivalents:
+  - violence → "tense confrontation", "dramatic conflict", "action sequence"
+  - dead/bodies → "still figures", "resting silhouettes", "motionless forms"
+  - blood/injury → "dramatic shadows", "weathered appearance", "dusty textures"
+  - weapons → "mysterious objects", "props", "tools"
+  - horror/scary → "eerie atmosphere", "mysterious mood", "suspenseful tone"
+  - zombies/undead → "shadowy figures", "pale silhouettes", "ethereal beings"
+- Focus ONLY on: composition, lighting, color palette, atmosphere, character poses, fashion, architecture
+- All prompts must pass content filters on Stable Diffusion, MidJourney, DALL-E, and Sora
+- When in doubt, use abstract and artistic language instead of literal descriptions
 `.trim()
 
 /** Clean markdown code fences from LLM response */
