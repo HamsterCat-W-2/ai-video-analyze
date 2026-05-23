@@ -9,6 +9,16 @@ const client = new OpenAI({
 const MODEL = "deepseek-chat"
 const TEMPERATURE = 0.2  // 低温度，输出更稳定可控
 
+/** 内容安全准则，所有生成函数共享 */
+const SAFETY_GUIDELINES = `
+内容安全准则（必须遵守）：
+- 生成的提示词不得包含血腥、暴力、色情、仇恨或其他违规内容的直接描写
+- 如果源视频包含暴力或冲突场景，用艺术化、电影化的语言转述（如 "tense confrontation" 代替具体的暴力行为描述）
+- 如果源视频包含尸体、伤口等画面，用氛围暗示代替直接描写（如 "aftermath"、"fallen figures"、"somber scene"）
+- 提示词需适配主流 AI 平台（Stable Diffusion / MidJourney / DALL-E）的内容安全政策
+- 重点描述：构图、光线、色调、氛围、角色姿态，而非具体的暴力或血腥细节
+`.trim()
+
 /** 清理 LLM 返回中可能残留的 markdown 代码块标记 */
 function cleanJson(text: string): string {
   return text.replace(/```json|```/g, "").trim()
@@ -23,7 +33,7 @@ async function generateCharacters(visionText: string, transcript: string): Promi
       messages: [
         {
           role: "system",
-          content: "你是专业的 AI 绘图提示词工程师。只返回合法 JSON 数组，不要有任何 markdown 代码块或多余文字。",
+          content: `你是专业的 AI 绘图提示词工程师。只返回合法 JSON 数组，不要有任何 markdown 代码块或多余文字。\n\n${SAFETY_GUIDELINES}`,
         },
         {
           role: "user",
@@ -79,7 +89,7 @@ async function generateStory(visionText: string, transcript: string): Promise<St
       messages: [
         {
           role: "system",
-          content: "你是专业的 AI 短剧内容分析师。只返回合法 JSON 对象，不要有任何 markdown 代码块或多余文字。",
+          content: `你是专业的 AI 短剧内容分析师。只返回合法 JSON 对象，不要有任何 markdown 代码块或多余文字。\n\n${SAFETY_GUIDELINES}`,
         },
         {
           role: "user",
@@ -121,7 +131,7 @@ async function generateShots(visionText: string): Promise<Shot[]> {
       messages: [
         {
           role: "system",
-          content: "你是专业的 AI 视频分镜师和 Stable Diffusion 提示词工程师。只返回合法 JSON 数组，不要有任何 markdown 代码块或多余文字。",
+          content: `你是专业的 AI 视频分镜师和 Stable Diffusion 提示词工程师。只返回合法 JSON 数组，不要有任何 markdown 代码块或多余文字。\n\n${SAFETY_GUIDELINES}`,
         },
         {
           role: "user",
@@ -173,7 +183,7 @@ async function generateMasterPrompt(visionText: string, transcript: string): Pro
       messages: [
         {
           role: "system",
-          content: "你是专业的 AI 内容创作提示词工程师。只返回纯文本，不要有 markdown 或多余格式。",
+          content: `你是专业的 AI 内容创作提示词工程师。只返回纯文本，不要有 markdown 或多余格式。\n\n${SAFETY_GUIDELINES}`,
         },
         {
           role: "user",
