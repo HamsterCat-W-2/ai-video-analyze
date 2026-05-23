@@ -35,12 +35,7 @@ Examples of GOOD descriptions:
 
 Examples of BAD descriptions (too vague):
 - "A robot with a glowing mask"
-- "An ostrich"
-
-Content safety (MUST follow):
-- NEVER describe: graphic violence, gore, blood, injury, weapons, self-harm, sexual content, nudity, child endangerment, bullying, hate speech
-- Banned words: blood, gore, wound, rotting, corpse, dead, kill, weapon, gun, knife, flesh, naked, nude, sexual, abuse, suicide
-- If a frame contains disturbing content, use safe cinematic equivalents: "tense confrontation" (violence), "still figures" (bodies), "dramatic shadows" (blood), "mysterious objects" (weapons), "shadowy figures" (undead), "eerie atmosphere" (horror)`
+- "An ostrich"`
 }
 
 /**

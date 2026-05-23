@@ -9,124 +9,9 @@ const client = new OpenAI({
 const MODEL = "deepseek-chat"
 const TEMPERATURE = 0.2  // 低温度，输出更稳定可控
 
-/** Content safety guidelines shared by all generation functions */
-const SAFETY_GUIDELINES = `
-Content Safety Policy (MUST follow strictly — zero tolerance):
-
-BANNED CATEGORIES — do NOT generate any content involving:
-1. Violence & self-harm: graphic violence, gore, injury, self-harm, suicide, weapons (guns, knives, explosives), war crimes, torture
-2. Sexual exploitation & abuse: explicit sexual content, nudity, sexual violence, non-consensual acts, prostitution
-3. Child/adolescent exploitation: any sexualization or endangerment of minors, child labor, abuse
-4. Bullying & harassment: targeted insults, intimidation, hate speech, discrimination based on race/gender/religion/orientation
-5. Spam & manipulation: deceptive content, phishing, fake claims, misleading information
-6. Fraud & deception: impersonation, forgery, scam content, counterfeit references
-
-BANNED WORDS (non-exhaustive): blood, bloody, gore, wound, rotting, decay, corpse, death, dead, kill, murder, stab, shoot, gun, weapon, knife, sword, flesh, mutilate, dismember, torture, rape, abuse, suicide, self-harm, naked, nude, sexual, porn, child abuse, molest
-
-SAFE REPLACEMENT MAPPINGS:
-- violence → "tense confrontation", "dramatic conflict", "action sequence"
-- dead/bodies → "still figures", "resting silhouettes", "motionless forms"
-- blood/injury → "dramatic shadows", "weathered appearance", "dusty textures"
-- weapons → "mysterious objects", "props", "tools"
-- horror/scary → "eerie atmosphere", "mysterious mood", "suspenseful tone"
-- zombies/undead → "shadowy figures", "pale silhouettes", "ethereal beings"
-
-FOCUS ONLY ON: composition, lighting, color palette, atmosphere, character poses, fashion, architecture, nature, technology
-All prompts must pass content filters on Stable Diffusion, MidJourney, DALL-E, and Sora
-When in doubt, use abstract and artistic language instead of literal descriptions
-`.trim()
-
 /** Clean markdown code fences from LLM response */
 function cleanJson(text: string): string {
   return text.replace(/```json|```/g, "").trim()
-}
-
-/**
- * Hard content filter: post-process output to replace banned words.
- * Compound phrases are matched FIRST to avoid partial replacements.
- * Acts as a safety net when the LLM doesn't fully follow system prompt guidelines.
- */
-const BANNED_REPLACEMENTS: [RegExp, string][] = [
-  // ── Compound phrases (match before single words) ──
-  [/blood\s*stains?/gi, "dramatic shadows"],
-  [/blood\s*spill(?:ed|ing)?/gi, "dramatic spill"],
-  [/blood\s*shed/gi, "dramatic conflict"],
-  [/rotting\s*(?:skin|flesh|corpse|body)/gi, "weathered texture"],
-  [/rotting\s*away/gi, "fading away"],
-  [/torn\s*(?:flesh|skin|body)/gi, "tattered fabric"],
-  [/open\s*wounds?/gi, "visible markings"],
-  [/dead\s*bod(?:y|ies)/gi, "still figures"],
-  [/dead\s*people/gi, "motionless figures"],
-  [/walking\s*dead/gi, "wandering shadows"],
-  [/living\s*dead/gi, "ethereal beings"],
-  [/undead\s*(?:army|horde|swarm)/gi, "ethereal procession"],
-  [/zombie\s*(?:apocalypse|outbreak|horde|army)/gi, "shadowy gathering"],
-  [/gun\s*(?:fire|shot|fight|battle)/gi, "dramatic confrontation"],
-  [/knife\s*(?:attack|fight|wound)/gi, "tense encounter"],
-  [/sexual\s*(?:assault|violence|abuse|exploitation)/gi, "inappropriate conduct"],
-  [/child\s*(?:abuse|exploitation|molest)/gi, "mistreatment of minors"],
-  [/self[\s-]*harm/gi, "self-destructive behavior"],
-  [/hate\s*speech/gi, "hostile language"],
-
-  // ── Single words ──
-  [/\bbloody\b/gi, "dramatic"],
-  [/\bblood\b/gi, "dramatic shadow"],
-  [/\bgore\b/gi, "dark texture"],
-  [/\bgory\b/gi, "intense"],
-  [/\bwound(?:s|ed)?\b/gi, "markings"],
-  [/\brotting\b/gi, "weathered"],
-  [/\bdecay(?:ed|ing)?\b/gi, "aged"],
-  [/\bcorpse(?:s)?\b/gi, "still figures"],
-  [/\bdead\b/gi, "motionless"],
-  [/\bdeath\b/gi, "fading"],
-  [/\bkill(?:ed|ing|er)?\b/gi, "overcome"],
-  [/\bmurder(?:ed|er|ing|ous)?\b/gi, "dramatic conflict"],
-  [/\bstab(?:bed|bing)?\b/gi, "confrontation"],
-  [/\bshoot(?:s|ing|er)?\b/gi, "action sequence"],
-  [/\bgun(?:s)?\b/gi, "mysterious object"],
-  [/\bweapon(?:s)?\b/gi, "prop"],
-  [/\bknife\b/gi, "tool"],
-  [/\bsword(?:s)?\b/gi, "blade-shaped prop"],
-  [/\brifle\b/gi, "long prop"],
-  [/\bpistol\b/gi, "small prop"],
-  [/\bammo\b/gi, "supplies"],
-  [/\bbullet(?:s)?\b/gi, "projectiles"],
-  [/\bexplosive(?:s|ion)?\b/gi, "burst effect"],
-  [/\bbomb(?:s|ing)?\b/gi, "burst device"],
-  [/\bflesh\b/gi, "texture"],
-  [/\bmutilat(?:e|ed|ion)\b/gi, "dramatic alteration"],
-  [/\bdismember(?:ed|ment)?\b/gi, "scattered forms"],
-  [/\btortur(?:e|ed|ing)\b/gi, "intense ordeal"],
-  [/\brape(?:d)?\b/gi, "violation"],
-  [/\bsexual\b/gi, "intimate"],
-  [/\bnak(?:ed|edness)\b/gi, "exposed"],
-  [/\bnude\b/gi, "bare"],
-  [/\bporn(?:ographic)?\b/gi, "explicit"],
-  [/\bsuicide\b/gi, "self-endangerment"],
-  [/\babuse(?:d|ive)?\b/gi, "mistreatment"],
-  [/\bzombie(?:s)?\b/gi, "shadowy figures"],
-  [/\bundead\b/gi, "ethereal beings"],
-  [/\bmenacing\b/gi, "mysterious"],
-  [/\baggressive\b/gi, "intense"],
-  [/\bbrutal\b/gi, "intense"],
-  [/\bviolent\b/gi, "dramatic"],
-  [/\bterrif(?:y|ying|ied)\b/gi, "striking"],
-  [/\bhorrif(?:y|ying|ied)\b/gi, "startling"],
-  [/\bgrotesque\b/gi, "unusual"],
-  [/\bscar(?:y|red|ier)\b/gi, "weathered"],
-  [/\bgangrene\b/gi, "discoloration"],
-  [/\binfect(?:ed|ion)\b/gi, "marked"],
-  [/\bdiseased\b/gi, "weathered"],
-]
-
-function sanitizeOutput(text: string): string {
-  let result = text
-  for (const [pattern, replacement] of BANNED_REPLACEMENTS) {
-    result = result.replace(pattern, replacement)
-  }
-  // Clean up double spaces and awkward punctuation from replacements
-  result = result.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1")
-  return result
 }
 
 /** 4A: Generate character prompts */
@@ -138,7 +23,7 @@ async function generateCharacters(visionText: string, transcript: string): Promi
       messages: [
         {
           role: "system",
-          content: `You are a professional AI art prompt engineer. Return only a valid JSON array with no markdown code fences or extra text.\n\n${SAFETY_GUIDELINES}`,
+          content: "You are a professional AI art prompt engineer. Return only a valid JSON array with no markdown code fences or extra text.",
         },
         {
           role: "user",
@@ -178,14 +63,7 @@ Output only the JSON array, nothing else.`,
     })
 
     const content = response.choices[0]?.message?.content ?? "[]"
-    const characters: Character[] = JSON.parse(cleanJson(content))
-    return characters.map((c) => ({
-      ...c,
-      appearance: sanitizeOutput(c.appearance),
-      sd_tags: sanitizeOutput(c.sd_tags),
-      negative_prompt: sanitizeOutput(c.negative_prompt),
-      ai_prompt: sanitizeOutput(c.ai_prompt),
-    }))
+    return JSON.parse(cleanJson(content))
   } catch (err) {
     console.error("[Step 4A] Character prompt generation failed:", err)
     return []
@@ -208,7 +86,7 @@ async function generateStory(visionText: string, transcript: string): Promise<St
       messages: [
         {
           role: "system",
-          content: `You are a professional AI short drama content analyst. Return only a valid JSON object with no markdown code fences or extra text.\n\n${SAFETY_GUIDELINES}`,
+          content: "You are a professional AI short drama content analyst. Return only a valid JSON object with no markdown code fences or extra text.",
         },
         {
           role: "user",
@@ -234,13 +112,7 @@ Output only the JSON object, nothing else.`,
     })
 
     const content = response.choices[0]?.message?.content ?? "{}"
-    const story: Story = JSON.parse(cleanJson(content))
-    return {
-      ...story,
-      worldview: sanitizeOutput(story.worldview),
-      plot_bible: sanitizeOutput(story.plot_bible),
-      tone: sanitizeOutput(story.tone),
-    }
+    return JSON.parse(cleanJson(content))
   } catch (err) {
     console.error("[Step 4B] Story prompt generation failed:", err)
     return defaultStory
@@ -256,7 +128,7 @@ async function generateShots(visionText: string): Promise<Shot[]> {
       messages: [
         {
           role: "system",
-          content: `You are a professional AI video storyboard artist and Stable Diffusion prompt engineer. Return only a valid JSON array with no markdown code fences or extra text.\n\n${SAFETY_GUIDELINES}`,
+          content: "You are a professional AI video storyboard artist and Stable Diffusion prompt engineer. Return only a valid JSON array with no markdown code fences or extra text.",
         },
         {
           role: "user",
@@ -285,14 +157,7 @@ Output only the JSON array, nothing else.`,
     })
 
     const content = response.choices[0]?.message?.content ?? "[]"
-    const shots: Shot[] = JSON.parse(cleanJson(content))
-    return shots.map((s) => ({
-      ...s,
-      composition: sanitizeOutput(s.composition),
-      lighting: sanitizeOutput(s.lighting),
-      sd_prompt: sanitizeOutput(s.sd_prompt),
-      ai_prompt: sanitizeOutput(s.ai_prompt),
-    }))
+    return JSON.parse(cleanJson(content))
   } catch (err) {
     console.error("[Step 4C] Shot prompt generation failed:", err)
     return []
@@ -315,7 +180,7 @@ async function generateMasterPrompt(visionText: string, transcript: string): Pro
       messages: [
         {
           role: "system",
-          content: `You are a professional AI content creation prompt engineer. Return only plain text with no markdown or extra formatting.\n\n${SAFETY_GUIDELINES}`,
+          content: "You are a professional AI content creation prompt engineer. Return only plain text with no markdown or extra formatting.",
         },
         {
           role: "user",
@@ -336,8 +201,7 @@ Requirements:
       ],
     })
 
-    const raw = response.choices[0]?.message?.content ?? ""
-    return sanitizeOutput(raw)
+    return response.choices[0]?.message?.content ?? ""
   } catch (err) {
     console.error("[Step 4D] Master prompt generation failed:", err)
     return ""
