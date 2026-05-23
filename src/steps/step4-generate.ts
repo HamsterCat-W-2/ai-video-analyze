@@ -29,8 +29,8 @@ async function generateCharacters(visionText: string, transcript: string): Promi
           role: "user",
           content: `根据以下视频帧分析，提取视频中出现的所有主要角色。
 
-重要：区分人类角色和非人类角色（机器人、仿生人、动物、雕塑、怪物、丧尸、玩偶、幻想生物等）。
-非人类角色必须在 sd_tags 中包含其类型标签（如 robot, android, sculpture, zombie, animal, creature）。
+重要：区分人类角色和非人类主体（动物、机械体、雕像、玩偶、幻想生物、特效角色等）。
+非人类角色的 sd_tags 必须包含其类型标签（如 robot, animal, sculpture, creature, doll 等）。
 
 视觉分析：
 ${visionText}
@@ -41,11 +41,11 @@ ${transcript.slice(0, 800)}
 返回 JSON 数组，每个角色的结构：
 [
   {
-    "name": "角色名或描述（如：机器人男主、鸵鸟坐骑、丧尸群）",
+    "name": "角色名或简短描述（如：男主、女主角、骑手、群众等）",
     "appearance": "英文外貌描述，用于 SD img2img 参考，需包含材质/质感信息",
-    "sd_tags": "SDXL 兼容的英文标签，逗号分隔，必须包含角色类型（robot/zombie/sculpture等）+ 性别 + 发型/外形 + 服装/配件 + 表情风格",
+    "sd_tags": "SDXL 兼容的英文标签，逗号分隔，需包含角色类型 + 性别 + 发型/外形 + 服装/配件 + 表情风格",
     "lora_suggestion": "推荐的 LoRA 模型类型名称",
-    "negative_prompt": "该角色的负面提示词，用于避免生成错误特征（如 robot 的 negative: organic skin, human face）",
+    "negative_prompt": "该角色的负面提示词，用于避免生成错误特征",
     "ai_prompt": "通用的英文自然语言角色描述，可直接复制到任何 AI 工具生成该角色。用完整句子描述角色的外观、材质、服装、气质，不要用标签格式"
   }
 ]
