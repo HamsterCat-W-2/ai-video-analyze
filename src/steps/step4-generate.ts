@@ -29,6 +29,9 @@ async function generateCharacters(visionText: string, transcript: string): Promi
           role: "user",
           content: `根据以下视频帧分析，提取视频中出现的所有主要角色。
 
+重要：区分人类角色和非人类角色（机器人、仿生人、动物、雕塑、怪物、丧尸、玩偶、幻想生物等）。
+非人类角色必须在 sd_tags 中包含其类型标签（如 robot, android, sculpture, zombie, animal, creature）。
+
 视觉分析：
 ${visionText}
 
@@ -38,10 +41,11 @@ ${transcript.slice(0, 800)}
 返回 JSON 数组，每个角色的结构：
 [
   {
-    "name": "角色名或描述（如男主/女主）",
-    "appearance": "英文外貌描述，用于 SD img2img 参考",
-    "sd_tags": "SDXL 兼容的英文标签，逗号分隔，包含性别/发型/服装/表情风格",
-    "lora_suggestion": "推荐的 LoRA 模型类型名称"
+    "name": "角色名或描述（如：机器人男主、鸵鸟坐骑、丧尸群）",
+    "appearance": "英文外貌描述，用于 SD img2img 参考，需包含材质/质感信息",
+    "sd_tags": "SDXL 兼容的英文标签，逗号分隔，必须包含角色类型（robot/zombie/sculpture等）+ 性别 + 发型/外形 + 服装/配件 + 表情风格",
+    "lora_suggestion": "推荐的 LoRA 模型类型名称",
+    "negative_prompt": "该角色的负面提示词，用于避免生成错误特征（如 robot 的 negative: organic skin, human face）"
   }
 ]
 
@@ -134,7 +138,8 @@ ${visionText}
     "composition": "构图描述，如 rule of thirds / centered / symmetrical",
     "lighting": "光线描述，如 warm side lighting / cold backlight",
     "camera_motion": "static 或 push-in 或 pull-out 或 pan 或 follow 或 handheld",
-    "sd_prompt": "完整的英文 Stable Diffusion 提示词，包含画质词、风格词、场景词，逗号分隔"
+    "sd_prompt": "完整的英文 Stable Diffusion 提示词，包含画质词、风格词、场景词，逗号分隔",
+    "ai_prompt": "通用的英文自然语言场景描述，可直接复制到任何 AI 工具（SD/MidJourney/DALL-E/Sora 等）使用。要求：完整的句子描述，包含角色外观、动作、场景环境、光线氛围，不要用标签格式，要用流畅的自然语言"
   }
 ]
 
@@ -155,24 +160,63 @@ export interface GeneratedResult {
   characters: Character[]
   story: Story
   shots: Shot[]
+  master_prompt: string
+}
+
+/** 4D: 生成全局 master prompt */
+async function generateMasterPrompt(visionText: string, transcript: string): Promise<string> {
+  try {
+    const response = await client.chat.completions.create({
+      model: MODEL,
+      temperature: TEMPERATURE,
+      messages: [
+        {
+          role: "system",
+          content: "你是专业的 AI 内容创作提示词工程师。只返回纯文本，不要有 markdown 或多余格式。",
+        },
+        {
+          role: "user",
+          content: `根据以下视频分析，生成一段全局风格描述（master prompt），可作为所有分镜的基础前缀。
+
+视觉分析（摘要）：
+${visionText.slice(0, 2000)}
+
+字幕参考：
+${transcript.slice(0, 800)}
+
+要求：
+- 英文自然语言描述，2-4 句话
+- 包含：整体画风（写实/卡通/赛博朋克等）、世界观背景、色调氛围、核心角色组合
+- 这段描述会被放在每个分镜 prompt 的前面，作为统一风格锚点
+- 直接输出描述文本，不要有任何前缀或格式标记`,
+        },
+      ],
+    })
+
+    return response.choices[0]?.message?.content ?? ""
+  } catch (err) {
+    console.error("[Step 4D] Master prompt 生成失败:", err)
+    return ""
+  }
 }
 
 /**
- * Step 4: 并行生成三类提示词
- * 三个请求互相独立，用 Promise.all 并发调用 DeepSeek
+ * Step 4: 并行生成四类提示词
+ * 四个请求互相独立，用 Promise.all 并发调用 DeepSeek
  */
 export async function step4Generate(visionText: string, transcript: string): Promise<GeneratedResult> {
   const start = Date.now()
-  console.log("[Step 4] 开始生成三类提示词（DeepSeek）")
+  console.log("[Step 4] 开始生成提示词（DeepSeek）")
   console.log(`[Step 4] 输入：视觉文本 ${visionText.length} 字符, 字幕 ${transcript.length} 字符`)
 
-  console.log("[Step 4] 并行请求：4A人物 + 4B故事 + 4C分镜")
-  const [characters, story, shots] = await Promise.all([
+  console.log("[Step 4] 并行请求：4A人物 + 4B故事 + 4C分镜 + 4D Master Prompt")
+  const [characters, story, shots, master_prompt] = await Promise.all([
     generateCharacters(visionText, transcript),
     generateStory(visionText, transcript),
     generateShots(visionText),
+    generateMasterPrompt(visionText, transcript),
   ])
 
-  console.log(`[Step 4] 完成：${characters.length} 个人物, ${shots.length} 个分镜, 耗时 ${Date.now() - start}ms`)
-  return { characters, story, shots }
+  console.log(`[Step 4] 完成：${characters.length} 个人物, ${shots.length} 个分镜, master_prompt ${master_prompt.length} 字符, 耗时 ${Date.now() - start}ms`)
+  return { characters, story, shots, master_prompt }
 }

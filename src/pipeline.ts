@@ -17,6 +17,7 @@ function initContext(videoPath: string): PipelineContext {
     audioPath: "",
     visionText: "",
     transcript: "",
+    duration: 0,
     startTime: Date.now(),
   }
 }
@@ -47,6 +48,7 @@ export async function runPipeline(videoPath: string): Promise<PromptPack> {
     ctx.tmpDir = extracted.tmpDir
     ctx.frames = extracted.frames
     ctx.audioPath = extracted.audioPath
+    ctx.duration = extracted.duration
 
     // Step 2 + Step 3：并行执行（视觉分析 和 语音转录 互相独立）
     const [visionText, transcript] = await Promise.all([

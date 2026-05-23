@@ -49,9 +49,11 @@ export function step5Validate(
   const totalTime = Date.now() - ctx.startTime
   const result: PromptPack = {
     video_id: ctx.videoId,
+    duration_seconds: ctx.duration,
     characters,
     story,
     shots,
+    master_prompt: generated.master_prompt ?? "",
     processing_time_ms: totalTime,
   }
 

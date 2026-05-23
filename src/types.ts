@@ -6,6 +6,7 @@ export const CharacterSchema = z.object({
   appearance: z.string(),       // 英文外貌描述，用于 img2img 参考
   sd_tags: z.string(),          // SDXL 标签，逗号分隔（性别/发型/服装/表情）
   lora_suggestion: z.string(),  // 推荐的 LoRA 模型名称
+  negative_prompt: z.string(),  // 负面提示词，避免生成错误特征
 })
 
 /** 分镜：单个镜头的视觉描述和 SD 提示词 */
@@ -17,6 +18,7 @@ export const ShotSchema = z.object({
   lighting: z.string(),          // 光线（warm side lighting 等）
   camera_motion: z.enum(["static", "push-in", "pull-out", "pan", "follow", "handheld"]),
   sd_prompt: z.string(),         // 完整的英文 SD 提示词
+  ai_prompt: z.string(),         // 通用自然语言提示词，可直接用于任何 AI 工具生成内容
 })
 
 /** 故事设定：世界观、风格、情感基调 */
@@ -34,6 +36,7 @@ export const PromptPackSchema = z.object({
   characters: z.array(CharacterSchema),
   story: StorySchema,
   shots: z.array(ShotSchema),
+  master_prompt: z.string(),                  // 全局风格描述，可作为所有 shot 的基础 prompt 前缀
   processing_time_ms: z.number().optional(),  // 总处理耗时
 })
 
@@ -51,5 +54,6 @@ export interface PipelineContext {
   audioPath: string    // 音轨文件路径
   visionText: string   // Step 2 视觉分析结果
   transcript: string   // Step 3 语音转录结果
+  duration: number     // 视频时长（秒）
   startTime: number    // 流水线开始时间戳
 }
