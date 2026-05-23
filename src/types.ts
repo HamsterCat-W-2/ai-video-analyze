@@ -7,6 +7,7 @@ export const CharacterSchema = z.object({
   sd_tags: z.string(),          // SDXL 标签，逗号分隔（性别/发型/服装/表情）
   lora_suggestion: z.string(),  // 推荐的 LoRA 模型名称
   negative_prompt: z.string(),  // 负面提示词，避免生成错误特征
+  ai_prompt: z.string(),        // 通用自然语言提示词，可直接用于任何 AI 工具生成该角色
 })
 
 /** 分镜：单个镜头的视觉描述和 SD 提示词 */

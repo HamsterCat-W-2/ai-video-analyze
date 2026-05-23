@@ -45,7 +45,8 @@ ${transcript.slice(0, 800)}
     "appearance": "英文外貌描述，用于 SD img2img 参考，需包含材质/质感信息",
     "sd_tags": "SDXL 兼容的英文标签，逗号分隔，必须包含角色类型（robot/zombie/sculpture等）+ 性别 + 发型/外形 + 服装/配件 + 表情风格",
     "lora_suggestion": "推荐的 LoRA 模型类型名称",
-    "negative_prompt": "该角色的负面提示词，用于避免生成错误特征（如 robot 的 negative: organic skin, human face）"
+    "negative_prompt": "该角色的负面提示词，用于避免生成错误特征（如 robot 的 negative: organic skin, human face）",
+    "ai_prompt": "通用的英文自然语言角色描述，可直接复制到任何 AI 工具生成该角色。用完整句子描述角色的外观、材质、服装、气质，不要用标签格式"
   }
 ]
 
