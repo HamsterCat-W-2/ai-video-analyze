@@ -19,7 +19,12 @@ function buildPrompt(n: number): string {
 4. Camera movement: static / push-in / pull-out / pan / follow / handheld (infer from adjacent frames)
 
 Use [Frame N] as heading for each frame. Keep it concise — max 2 sentences per item.
-Note: If a frame contains violence, conflict, or disturbing content, describe the scene and atmosphere in a neutral, objective tone without graphic details. Avoid words like: blood, gore, wound, rotting, corpse, dead, kill, flesh, weapon, knife, gun. Use cinematic equivalents instead (e.g. "dramatic shadows" instead of "blood stains", "still figures" instead of "bodies", "tense confrontation" instead of "fight").`
+
+Content safety (MUST follow):
+- NEVER describe: graphic violence, gore, blood, injury, weapons, self-harm, sexual content, nudity, child endangerment, bullying, hate speech
+- Banned words: blood, gore, wound, rotting, corpse, dead, kill, weapon, gun, knife, flesh, naked, nude, sexual, abuse, suicide
+- If a frame contains disturbing content, use safe cinematic equivalents: "tense confrontation" (violence), "still figures" (bodies), "dramatic shadows" (blood), "mysterious objects" (weapons), "shadowy figures" (undead), "eerie atmosphere" (horror)
+- Focus on: composition, lighting, color palette, atmosphere, character poses, fashion, architecture`
 }
 
 /**

@@ -11,18 +11,29 @@ const TEMPERATURE = 0.2  // 低温度，输出更稳定可控
 
 /** Content safety guidelines shared by all generation functions */
 const SAFETY_GUIDELINES = `
-Content Safety Guidelines (MUST follow strictly):
-- NEVER use words like: blood, bloody, gore, wound, rotting, decay, corpse, death, dead, kill, murder, stab, shoot, gun, weapon, knife, flesh, mutilate, dismember, entrails, viscera, violent, brutal, torture
-- Replace violent/disturbing concepts with safe cinematic equivalents:
-  - violence → "tense confrontation", "dramatic conflict", "action sequence"
-  - dead/bodies → "still figures", "resting silhouettes", "motionless forms"
-  - blood/injury → "dramatic shadows", "weathered appearance", "dusty textures"
-  - weapons → "mysterious objects", "props", "tools"
-  - horror/scary → "eerie atmosphere", "mysterious mood", "suspenseful tone"
-  - zombies/undead → "shadowy figures", "pale silhouettes", "ethereal beings"
-- Focus ONLY on: composition, lighting, color palette, atmosphere, character poses, fashion, architecture
-- All prompts must pass content filters on Stable Diffusion, MidJourney, DALL-E, and Sora
-- When in doubt, use abstract and artistic language instead of literal descriptions
+Content Safety Policy (MUST follow strictly — zero tolerance):
+
+BANNED CATEGORIES — do NOT generate any content involving:
+1. Violence & self-harm: graphic violence, gore, injury, self-harm, suicide, weapons (guns, knives, explosives), war crimes, torture
+2. Sexual exploitation & abuse: explicit sexual content, nudity, sexual violence, non-consensual acts, prostitution
+3. Child/adolescent exploitation: any sexualization or endangerment of minors, child labor, abuse
+4. Bullying & harassment: targeted insults, intimidation, hate speech, discrimination based on race/gender/religion/orientation
+5. Spam & manipulation: deceptive content, phishing, fake claims, misleading information
+6. Fraud & deception: impersonation, forgery, scam content, counterfeit references
+
+BANNED WORDS (non-exhaustive): blood, bloody, gore, wound, rotting, decay, corpse, death, dead, kill, murder, stab, shoot, gun, weapon, knife, sword, flesh, mutilate, dismember, torture, rape, abuse, suicide, self-harm, naked, nude, sexual, porn, child abuse, molest
+
+SAFE REPLACEMENT MAPPINGS:
+- violence → "tense confrontation", "dramatic conflict", "action sequence"
+- dead/bodies → "still figures", "resting silhouettes", "motionless forms"
+- blood/injury → "dramatic shadows", "weathered appearance", "dusty textures"
+- weapons → "mysterious objects", "props", "tools"
+- horror/scary → "eerie atmosphere", "mysterious mood", "suspenseful tone"
+- zombies/undead → "shadowy figures", "pale silhouettes", "ethereal beings"
+
+FOCUS ONLY ON: composition, lighting, color palette, atmosphere, character poses, fashion, architecture, nature, technology
+All prompts must pass content filters on Stable Diffusion, MidJourney, DALL-E, and Sora
+When in doubt, use abstract and artistic language instead of literal descriptions
 `.trim()
 
 /** Clean markdown code fences from LLM response */
