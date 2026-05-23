@@ -142,10 +142,17 @@ async function generateCharacters(visionText: string, transcript: string): Promi
         },
         {
           role: "user",
-          content: `Extract all main characters from the following video frame analysis.
+          content: `Extract the MAIN recurring characters from the following video frame analysis.
 
-Important: Distinguish human characters from non-human subjects (animals, mechanical beings, sculptures, dolls, fantasy creatures, VFX characters, etc.).
-Non-human characters MUST include their type label in sd_tags (e.g. robot, animal, sculpture, creature, doll).
+CRITICAL RULES:
+1. ONLY include characters that appear in MULTIPLE frames (2+). A character mentioned in only one frame is likely a background element, not a main character.
+2. DO NOT include incidental objects, props, furniture, or background decorations as characters.
+3. DO NOT hallucinate or infer characters that are not explicitly described in the vision analysis.
+4. If unsure whether something is a character or an object, EXCLUDE it.
+5. Maximum 5 characters. Quality over quantity — fewer, accurate characters are better than many inaccurate ones.
+
+Distinguish human characters from non-human subjects (animals, mechanical beings, etc.).
+Non-human characters MUST include their type label in sd_tags (e.g. robot, animal, creature).
 
 Vision analysis:
 ${visionText}
@@ -156,7 +163,7 @@ ${transcript.slice(0, 800)}
 Return a JSON array with this structure:
 [
   {
-    "name": "Character name or short description (e.g. male lead, female protagonist, rider, crowd)",
+    "name": "Character name or short description (e.g. male lead, robot protagonist, animal companion)",
     "appearance": "English appearance description for SD img2img reference, must include material/texture details",
     "sd_tags": "SDXL-compatible English tags, comma-separated, must include character type + gender + hair/shape + clothing/accessories + expression style",
     "lora_suggestion": "Recommended LoRA model type name",
