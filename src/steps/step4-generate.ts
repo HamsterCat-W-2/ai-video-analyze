@@ -43,12 +43,36 @@ function cleanJson(text: string): string {
 
 /**
  * Hard content filter: post-process output to replace banned words.
+ * Compound phrases are matched FIRST to avoid partial replacements.
  * Acts as a safety net when the LLM doesn't fully follow system prompt guidelines.
  */
 const BANNED_REPLACEMENTS: [RegExp, string][] = [
+  // ── Compound phrases (match before single words) ──
+  [/blood\s*stains?/gi, "dramatic shadows"],
+  [/blood\s*spill(?:ed|ing)?/gi, "dramatic spill"],
+  [/blood\s*shed/gi, "dramatic conflict"],
+  [/rotting\s*(?:skin|flesh|corpse|body)/gi, "weathered texture"],
+  [/rotting\s*away/gi, "fading away"],
+  [/torn\s*(?:flesh|skin|body)/gi, "tattered fabric"],
+  [/open\s*wounds?/gi, "visible markings"],
+  [/dead\s*bod(?:y|ies)/gi, "still figures"],
+  [/dead\s*people/gi, "motionless figures"],
+  [/walking\s*dead/gi, "wandering shadows"],
+  [/living\s*dead/gi, "ethereal beings"],
+  [/undead\s*(?:army|horde|swarm)/gi, "ethereal procession"],
+  [/zombie\s*(?:apocalypse|outbreak|horde|army)/gi, "shadowy gathering"],
+  [/gun\s*(?:fire|shot|fight|battle)/gi, "dramatic confrontation"],
+  [/knife\s*(?:attack|fight|wound)/gi, "tense encounter"],
+  [/sexual\s*(?:assault|violence|abuse|exploitation)/gi, "inappropriate conduct"],
+  [/child\s*(?:abuse|exploitation|molest)/gi, "mistreatment of minors"],
+  [/self[\s-]*harm/gi, "self-destructive behavior"],
+  [/hate\s*speech/gi, "hostile language"],
+
+  // ── Single words ──
   [/\bbloody\b/gi, "dramatic"],
-  [/\bblood\b/gi, "dramatic shadows"],
-  [/\bgore\b/gi, "dark textures"],
+  [/\bblood\b/gi, "dramatic shadow"],
+  [/\bgore\b/gi, "dark texture"],
+  [/\bgory\b/gi, "intense"],
   [/\bwound(?:s|ed)?\b/gi, "markings"],
   [/\brotting\b/gi, "weathered"],
   [/\bdecay(?:ed|ing)?\b/gi, "aged"],
@@ -59,11 +83,16 @@ const BANNED_REPLACEMENTS: [RegExp, string][] = [
   [/\bmurder(?:ed|er|ing|ous)?\b/gi, "dramatic conflict"],
   [/\bstab(?:bed|bing)?\b/gi, "confrontation"],
   [/\bshoot(?:s|ing|er)?\b/gi, "action sequence"],
-  [/\bshot\b/gi, "moment"],  // only when context is violent — generic but safe
-  [/\bgun(?:s|ner|shot)?\b/gi, "mysterious object"],
+  [/\bgun(?:s)?\b/gi, "mysterious object"],
   [/\bweapon(?:s)?\b/gi, "prop"],
   [/\bknife\b/gi, "tool"],
   [/\bsword(?:s)?\b/gi, "blade-shaped prop"],
+  [/\brifle\b/gi, "long prop"],
+  [/\bpistol\b/gi, "small prop"],
+  [/\bammo\b/gi, "supplies"],
+  [/\bbullet(?:s)?\b/gi, "projectiles"],
+  [/\bexplosive(?:s|ion)?\b/gi, "burst effect"],
+  [/\bbomb(?:s|ing)?\b/gi, "burst device"],
   [/\bflesh\b/gi, "texture"],
   [/\bmutilat(?:e|ed|ion)\b/gi, "dramatic alteration"],
   [/\bdismember(?:ed|ment)?\b/gi, "scattered forms"],
@@ -74,7 +103,6 @@ const BANNED_REPLACEMENTS: [RegExp, string][] = [
   [/\bnude\b/gi, "bare"],
   [/\bporn(?:ographic)?\b/gi, "explicit"],
   [/\bsuicide\b/gi, "self-endangerment"],
-  [/\bself-harm\b/gi, "self-destructive behavior"],
   [/\babuse(?:d|ive)?\b/gi, "mistreatment"],
   [/\bzombie(?:s)?\b/gi, "shadowy figures"],
   [/\bundead\b/gi, "ethereal beings"],
@@ -82,6 +110,13 @@ const BANNED_REPLACEMENTS: [RegExp, string][] = [
   [/\baggressive\b/gi, "intense"],
   [/\bbrutal\b/gi, "intense"],
   [/\bviolent\b/gi, "dramatic"],
+  [/\bterrif(?:y|ying|ied)\b/gi, "striking"],
+  [/\bhorrif(?:y|ying|ied)\b/gi, "startling"],
+  [/\bgrotesque\b/gi, "unusual"],
+  [/\bscar(?:y|red|ier)\b/gi, "weathered"],
+  [/\bgangrene\b/gi, "discoloration"],
+  [/\binfect(?:ed|ion)\b/gi, "marked"],
+  [/\bdiseased\b/gi, "weathered"],
 ]
 
 function sanitizeOutput(text: string): string {
@@ -89,6 +124,8 @@ function sanitizeOutput(text: string): string {
   for (const [pattern, replacement] of BANNED_REPLACEMENTS) {
     result = result.replace(pattern, replacement)
   }
+  // Clean up double spaces and awkward punctuation from replacements
+  result = result.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1")
   return result
 }
 
