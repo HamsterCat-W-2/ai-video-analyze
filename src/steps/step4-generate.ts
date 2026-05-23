@@ -41,6 +41,57 @@ function cleanJson(text: string): string {
   return text.replace(/```json|```/g, "").trim()
 }
 
+/**
+ * Hard content filter: post-process output to replace banned words.
+ * Acts as a safety net when the LLM doesn't fully follow system prompt guidelines.
+ */
+const BANNED_REPLACEMENTS: [RegExp, string][] = [
+  [/\bbloody\b/gi, "dramatic"],
+  [/\bblood\b/gi, "dramatic shadows"],
+  [/\bgore\b/gi, "dark textures"],
+  [/\bwound(?:s|ed)?\b/gi, "markings"],
+  [/\brotting\b/gi, "weathered"],
+  [/\bdecay(?:ed|ing)?\b/gi, "aged"],
+  [/\bcorpse(?:s)?\b/gi, "still figures"],
+  [/\bdead\b/gi, "motionless"],
+  [/\bdeath\b/gi, "fading"],
+  [/\bkill(?:ed|ing|er)?\b/gi, "overcome"],
+  [/\bmurder(?:ed|er|ing|ous)?\b/gi, "dramatic conflict"],
+  [/\bstab(?:bed|bing)?\b/gi, "confrontation"],
+  [/\bshoot(?:s|ing|er)?\b/gi, "action sequence"],
+  [/\bshot\b/gi, "moment"],  // only when context is violent — generic but safe
+  [/\bgun(?:s|ner|shot)?\b/gi, "mysterious object"],
+  [/\bweapon(?:s)?\b/gi, "prop"],
+  [/\bknife\b/gi, "tool"],
+  [/\bsword(?:s)?\b/gi, "blade-shaped prop"],
+  [/\bflesh\b/gi, "texture"],
+  [/\bmutilat(?:e|ed|ion)\b/gi, "dramatic alteration"],
+  [/\bdismember(?:ed|ment)?\b/gi, "scattered forms"],
+  [/\btortur(?:e|ed|ing)\b/gi, "intense ordeal"],
+  [/\brape(?:d)?\b/gi, "violation"],
+  [/\bsexual\b/gi, "intimate"],
+  [/\bnak(?:ed|edness)\b/gi, "exposed"],
+  [/\bnude\b/gi, "bare"],
+  [/\bporn(?:ographic)?\b/gi, "explicit"],
+  [/\bsuicide\b/gi, "self-endangerment"],
+  [/\bself-harm\b/gi, "self-destructive behavior"],
+  [/\babuse(?:d|ive)?\b/gi, "mistreatment"],
+  [/\bzombie(?:s)?\b/gi, "shadowy figures"],
+  [/\bundead\b/gi, "ethereal beings"],
+  [/\bmenacing\b/gi, "mysterious"],
+  [/\baggressive\b/gi, "intense"],
+  [/\bbrutal\b/gi, "intense"],
+  [/\bviolent\b/gi, "dramatic"],
+]
+
+function sanitizeOutput(text: string): string {
+  let result = text
+  for (const [pattern, replacement] of BANNED_REPLACEMENTS) {
+    result = result.replace(pattern, replacement)
+  }
+  return result
+}
+
 /** 4A: Generate character prompts */
 async function generateCharacters(visionText: string, transcript: string): Promise<Character[]> {
   try {
@@ -83,7 +134,14 @@ Output only the JSON array, nothing else.`,
     })
 
     const content = response.choices[0]?.message?.content ?? "[]"
-    return JSON.parse(cleanJson(content))
+    const characters: Character[] = JSON.parse(cleanJson(content))
+    return characters.map((c) => ({
+      ...c,
+      appearance: sanitizeOutput(c.appearance),
+      sd_tags: sanitizeOutput(c.sd_tags),
+      negative_prompt: sanitizeOutput(c.negative_prompt),
+      ai_prompt: sanitizeOutput(c.ai_prompt),
+    }))
   } catch (err) {
     console.error("[Step 4A] Character prompt generation failed:", err)
     return []
@@ -132,7 +190,13 @@ Output only the JSON object, nothing else.`,
     })
 
     const content = response.choices[0]?.message?.content ?? "{}"
-    return JSON.parse(cleanJson(content))
+    const story: Story = JSON.parse(cleanJson(content))
+    return {
+      ...story,
+      worldview: sanitizeOutput(story.worldview),
+      plot_bible: sanitizeOutput(story.plot_bible),
+      tone: sanitizeOutput(story.tone),
+    }
   } catch (err) {
     console.error("[Step 4B] Story prompt generation failed:", err)
     return defaultStory
@@ -177,7 +241,14 @@ Output only the JSON array, nothing else.`,
     })
 
     const content = response.choices[0]?.message?.content ?? "[]"
-    return JSON.parse(cleanJson(content))
+    const shots: Shot[] = JSON.parse(cleanJson(content))
+    return shots.map((s) => ({
+      ...s,
+      composition: sanitizeOutput(s.composition),
+      lighting: sanitizeOutput(s.lighting),
+      sd_prompt: sanitizeOutput(s.sd_prompt),
+      ai_prompt: sanitizeOutput(s.ai_prompt),
+    }))
   } catch (err) {
     console.error("[Step 4C] Shot prompt generation failed:", err)
     return []
@@ -221,7 +292,8 @@ Requirements:
       ],
     })
 
-    return response.choices[0]?.message?.content ?? ""
+    const raw = response.choices[0]?.message?.content ?? ""
+    return sanitizeOutput(raw)
   } catch (err) {
     console.error("[Step 4D] Master prompt generation failed:", err)
     return ""
