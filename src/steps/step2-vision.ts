@@ -12,15 +12,14 @@ const MAX_CONCURRENT = 3    // 最多 3 批并发，避免触发 429 限流
 
 /** 构造视觉分析的提示词 */
 function buildPrompt(n: number): string {
-  return `按时间顺序分析这 ${n} 帧画面，对每帧依次描述：
-1. 角色：画面中出现的所有主体，区分人类与非人类（动物、机械体、雕像、玩偶、幻想生物、特效角色等）。
-   描述每个角色的：外貌/材质特征、服装/配件、表情/姿态。非人类角色需明确标注其类型。
-2. 场景：地点类型、背景环境、时间氛围、色调
-3. 镜头：景别（特写/近景/中景/全景/远景）、构图方式、光线方向与质感
-4. 运镜：静止 / 推进 / 拉远 / 摇移 / 跟拍（根据相邻帧推断）
+  return `Analyze these ${n} frames in chronological order. For each frame, describe:
+1. Characters: All subjects in the frame, distinguish humans from non-humans (animals, mechanical beings, sculptures, dolls, fantasy creatures, VFX characters, etc.). Describe each character's: appearance/material features, clothing/accessories, expression/pose. Non-human subjects must be clearly labeled by type.
+2. Scene: Location type, background environment, time/atmosphere, color palette
+3. Shot: Framing (close-up / medium / wide / extreme close-up), composition, lighting direction and quality
+4. Camera movement: static / push-in / pull-out / pan / follow / handheld (infer from adjacent frames)
 
-每帧用 [Frame N] 作为标题，内容简洁，每项不超过2句。
-注意：如果画面包含暴力、冲突或不适内容，用客观中立的语言描述场景和氛围，不展开血腥细节。`
+Use [Frame N] as heading for each frame. Keep it concise — max 2 sentences per item.
+Note: If a frame contains violence, conflict, or disturbing content, describe the scene and atmosphere in a neutral, objective tone without graphic details.`
 }
 
 /**
