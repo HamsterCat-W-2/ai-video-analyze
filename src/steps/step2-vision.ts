@@ -59,18 +59,21 @@ async function analyzeBatch(batchFrames: string[]): Promise<string> {
  */
 export async function step2Vision(frames: string[]): Promise<string> {
   const start = Date.now()
-  console.log(`[Step 2] 视觉分析，共 ${frames.length} 帧 ...`)
+  console.log(`[Step 2] 开始视觉分析，共 ${frames.length} 帧`)
 
   // 将帧列表按 BATCH_SIZE 分组
   const batches: string[][] = []
   for (let i = 0; i < frames.length; i += BATCH_SIZE) {
     batches.push(frames.slice(i, i + BATCH_SIZE))
   }
+  console.log(`[Step 2] 分为 ${batches.length} 批，每批最多 ${BATCH_SIZE} 帧，并发上限 ${MAX_CONCURRENT}`)
 
   // 按 MAX_CONCURRENT 控制并发，每轮最多同时请求 3 批
   const results: string[] = []
   for (let i = 0; i < batches.length; i += MAX_CONCURRENT) {
     const chunk = batches.slice(i, i + MAX_CONCURRENT)
+    const round = Math.floor(i / MAX_CONCURRENT) + 1
+    console.log(`[Step 2] 第 ${round} 轮：处理批次 ${i + 1}-${Math.min(i + MAX_CONCURRENT, batches.length)}`)
     const chunkResults = await Promise.all(
       chunk.map((batch) => analyzeBatch(batch))
     )
@@ -79,6 +82,6 @@ export async function step2Vision(frames: string[]): Promise<string> {
 
   // 所有批次用分隔线拼接
   const visionText = results.join("\n\n---\n\n")
-  console.log(`[Step 2] ...done（耗时 ${Date.now() - start}ms）`)
+  console.log(`[Step 2] 完成：${batches.length} 批分析结果, 文本长度 ${visionText.length} 字符, 耗时 ${Date.now() - start}ms`)
   return visionText
 }

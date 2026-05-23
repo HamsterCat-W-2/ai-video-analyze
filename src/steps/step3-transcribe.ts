@@ -14,14 +14,17 @@ const client = new OpenAI({
  */
 export async function step3Transcribe(audioPath: string): Promise<string> {
   const start = Date.now()
-  console.log("[Step 3] 语音转录（千问3-ASR-Flash）...")
+  console.log("[Step 3] 开始语音转录（千问3-ASR-Flash）")
+  console.log(`[Step 3] 音频路径: ${audioPath}`)
 
   try {
     // 读取音轨文件并转为 base64，直传 API 无需 OSS 中转
     const buffer = await fs.promises.readFile(audioPath)
+    console.log(`[Step 3] 音频文件大小: ${(buffer.length / 1024).toFixed(1)}KB, base64 编码中...`)
     const base64Audio = buffer.toString("base64")
 
     // 使用 chat completions 接口，通过 input_audio 类型传入音频
+    console.log("[Step 3] 调用 Qwen3-ASR-Flash API...")
     const response = await client.chat.completions.create({
       model: "qwen3-asr-flash",
       messages: [
@@ -41,7 +44,7 @@ export async function step3Transcribe(audioPath: string): Promise<string> {
     })
 
     const transcript = response.choices[0]?.message?.content ?? ""
-    console.log(`[Step 3] ...done（耗时 ${Date.now() - start}ms）`)
+    console.log(`[Step 3] 完成：转录文本 ${transcript.length} 字符, 耗时 ${Date.now() - start}ms`)
     return transcript
   } catch (err) {
     // 转录失败不中断流水线，返回空字符串让 Step 4 继续

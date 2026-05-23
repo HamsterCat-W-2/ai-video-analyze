@@ -40,19 +40,23 @@ function extractAudio(videoPath: string, audioPath: string): Promise<void> {
  */
 export async function step1Extract(videoPath: string): Promise<ExtractResult> {
   const start = Date.now()
-  console.log("[Step 1] 抽帧 + 分离音轨 ...")
+  console.log("[Step 1] 开始视频预处理：抽帧 + 分离音轨")
+  console.log(`[Step 1] 视频路径: ${videoPath}`)
 
   // 创建临时目录用于存放抽帧和音轨产物
   const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "sdl-"))
   const framesDir = path.join(tmpDir, "frames")
   await fs.promises.mkdir(framesDir)
   const audioPath = path.join(tmpDir, "audio.mp3")
+  console.log(`[Step 1] 临时目录: ${tmpDir}`)
 
   // 抽帧和音轨分离并行执行，互不依赖
+  console.log("[Step 1] 并行执行：抽帧(1fps, 最多60帧) + 音轨分离(mp3)")
   await Promise.all([
     extractFrames(videoPath, framesDir),
     extractAudio(videoPath, audioPath),
   ])
+  console.log("[Step 1] ffmpeg 处理完成")
 
   // 读取帧文件列表，按文件名排序确保时间顺序
   const frameFiles = await fs.promises.readdir(framesDir)
@@ -61,6 +65,7 @@ export async function step1Extract(videoPath: string): Promise<ExtractResult> {
     .sort()
     .map((f) => path.join(framesDir, f))
 
-  console.log(`[Step 1] ...done（耗时 ${Date.now() - start}ms）, ${frames.length} 帧`)
+  const audioSize = (await fs.promises.stat(audioPath)).size
+  console.log(`[Step 1] 完成：${frames.length} 帧, 音轨 ${(audioSize / 1024).toFixed(1)}KB, 耗时 ${Date.now() - start}ms`)
   return { tmpDir, frames, audioPath }
 }

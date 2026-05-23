@@ -163,14 +163,16 @@ export interface GeneratedResult {
  */
 export async function step4Generate(visionText: string, transcript: string): Promise<GeneratedResult> {
   const start = Date.now()
-  console.log("[Step 4] 生成三类提示词（DeepSeek）...")
+  console.log("[Step 4] 开始生成三类提示词（DeepSeek）")
+  console.log(`[Step 4] 输入：视觉文本 ${visionText.length} 字符, 字幕 ${transcript.length} 字符`)
 
+  console.log("[Step 4] 并行请求：4A人物 + 4B故事 + 4C分镜")
   const [characters, story, shots] = await Promise.all([
     generateCharacters(visionText, transcript),
     generateStory(visionText, transcript),
     generateShots(visionText),
   ])
 
-  console.log(`[Step 4] ...done（耗时 ${Date.now() - start}ms）`)
+  console.log(`[Step 4] 完成：${characters.length} 个人物, ${shots.length} 个分镜, 耗时 ${Date.now() - start}ms`)
   return { characters, story, shots }
 }
