@@ -13,12 +13,19 @@ const MAX_CONCURRENT = 3    // 最多 3 批并发，避免触发 429 限流
 /** 构造视觉分析的提示词 */
 function buildPrompt(n: number): string {
   return `Analyze these ${n} frames in chronological order. For each frame, describe:
-1. Characters: All subjects in the frame, distinguish humans from non-humans (animals, mechanical beings, sculptures, dolls, fantasy creatures, VFX characters, etc.). Describe each character's: appearance/material features, clothing/accessories, expression/pose. Non-human subjects must be clearly labeled by type.
+1. Characters: Only subjects that are CLEARLY VISIBLE and IDENTIFIABLE in the frame. Distinguish humans from non-humans (animals, mechanical beings, sculptures, dolls, etc.). Describe each character's: appearance/material features, clothing/accessories, expression/pose. Non-human subjects must be clearly labeled by type.
 2. Scene: Location type, background environment, time/atmosphere, color palette
 3. Shot: Framing (close-up / medium / wide / extreme close-up), composition, lighting direction and quality
 4. Camera movement: static / push-in / pull-out / pan / follow / handheld (infer from adjacent frames)
 
 Use [Frame N] as heading for each frame. Keep it concise — max 2 sentences per item.
+
+CRITICAL — Anti-hallucination rules:
+- ONLY describe what you can ACTUALLY SEE in each frame. Do NOT infer, guess, or assume the presence of characters.
+- Do NOT add characters that are "typical" for this type of scene but not visible.
+- If you cannot clearly identify a subject, say "unclear figure" or "unidentifiable shape" — do NOT guess its type or gender.
+- Background objects (furniture, mannequins, signs, decorations) are NOT characters unless they are clearly an active subject in the scene.
+- When in doubt, describe the scene/environment rather than inventing characters.
 
 Content safety (MUST follow):
 - NEVER describe: graphic violence, gore, blood, injury, weapons, self-harm, sexual content, nudity, child endangerment, bullying, hate speech
