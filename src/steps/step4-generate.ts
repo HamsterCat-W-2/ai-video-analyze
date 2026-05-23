@@ -7,12 +7,14 @@ const client = new OpenAI({
 })
 
 const MODEL = "deepseek-chat"
-const TEMPERATURE = 0.2
+const TEMPERATURE = 0.2  // 低温度，输出更稳定可控
 
+/** 清理 LLM 返回中可能残留的 markdown 代码块标记 */
 function cleanJson(text: string): string {
   return text.replace(/```json|```/g, "").trim()
 }
 
+/** 4A: 生成人物角色提示词 */
 async function generateCharacters(visionText: string, transcript: string): Promise<Character[]> {
   try {
     const response = await client.chat.completions.create({
@@ -56,6 +58,7 @@ ${transcript.slice(0, 800)}
   }
 }
 
+/** 4B: 生成故事设定提示词 */
 async function generateStory(visionText: string, transcript: string): Promise<Story> {
   const defaultStory: Story = {
     genre: [],
@@ -104,6 +107,7 @@ ${transcript}
   }
 }
 
+/** 4C: 生成分镜提示词 */
 async function generateShots(visionText: string): Promise<Shot[]> {
   try {
     const response = await client.chat.completions.create({
@@ -153,6 +157,10 @@ export interface GeneratedResult {
   shots: Shot[]
 }
 
+/**
+ * Step 4: 并行生成三类提示词
+ * 三个请求互相独立，用 Promise.all 并发调用 DeepSeek
+ */
 export async function step4Generate(visionText: string, transcript: string): Promise<GeneratedResult> {
   const start = Date.now()
   console.log("[Step 4] 生成三类提示词（DeepSeek）...")
