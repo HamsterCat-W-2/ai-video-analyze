@@ -13,24 +13,34 @@ const MAX_CONCURRENT = 3    // 最多 3 批并发，避免触发 429 限流
 /** 构造视觉分析的提示词 */
 function buildPrompt(n: number): string {
   return `Analyze these ${n} frames in chronological order. For each frame, describe:
-1. Characters: Subjects clearly visible in the frame. Distinguish humans from non-humans (animals, mechanical beings, sculptures, dolls, etc.). For each character, describe in DETAIL: exact appearance features (face type, eye color/glow, skin material, body shape), clothing/accessories (specific colors, patterns,款式), expression/pose, and any unique identifiers (screens, markings, textures). Non-human subjects must be clearly labeled by type.
+1. Characters: All subjects visible in the frame. Distinguish humans from non-humans (animals, mechanical beings, sculptures, dolls, etc.). Non-human subjects must be clearly labeled by type.
 2. Scene: Location type, background environment, time/atmosphere, color palette
 3. Shot: Framing (close-up / medium / wide / extreme close-up), composition, lighting direction and quality
 4. Camera movement: static / push-in / pull-out / pan / follow / handheld (infer from adjacent frames)
 
 Use [Frame N] as heading for each frame. Keep it concise — max 2 sentences per item.
 
-RULES:
-- Be SPECIFIC and DETAILED about what you see — describe exact colors, materials, textures, patterns, expressions. Vague descriptions like "glowing mask" are less useful than "digital face screen displaying a green smiley emoticon".
-- ONLY describe subjects that are clearly present in the frame. Do NOT invent or infer characters that are not visible.
-- Background objects (furniture, decorations) are not characters unless they are clearly an active, prominent subject.
-- If a subject is unclear or ambiguous, describe what you CAN see (shape, color, position) rather than guessing what it is.
+DETAIL REQUIREMENT (very important):
+Your goal is to provide RICH, SPECIFIC visual descriptions that capture every observable detail. For each character, describe:
+- Face/head: type (human face, digital screen, mask, animal head), displayed content (emoticons, text, expressions), eye color and glow
+- Body: material (metal, wood, fabric, skin), texture (smooth, rough, weathered, dusty), visible joints or mechanical parts
+- Clothing: exact items (jacket, hat, scarf, dress), colors, patterns (polka dot, striped), condition (torn, clean, dirty)
+- Accessories: glasses, weapons as props, bags, jewelry — describe shape, color, position
+- Pose/posture: standing, sitting, running, crouching, facing camera, back turned
+- Unique identifiers: scars, markings, screens, glowing elements, distinctive features
+
+Examples of GOOD descriptions:
+- "A robot with a digital face screen displaying a green smiley emoticon, blue glowing eyes, wearing a brown leather jacket with a red scarf, metallic body with visible bolted joints and weathered dusty surface"
+- "A large ostrich with glossy black body feathers, white neck and head, bloodshot red eyes, wide open yellow beak, standing on long powerful legs"
+
+Examples of BAD descriptions (too vague):
+- "A robot with a glowing mask"
+- "An ostrich"
 
 Content safety (MUST follow):
 - NEVER describe: graphic violence, gore, blood, injury, weapons, self-harm, sexual content, nudity, child endangerment, bullying, hate speech
 - Banned words: blood, gore, wound, rotting, corpse, dead, kill, weapon, gun, knife, flesh, naked, nude, sexual, abuse, suicide
-- If a frame contains disturbing content, use safe cinematic equivalents: "tense confrontation" (violence), "still figures" (bodies), "dramatic shadows" (blood), "mysterious objects" (weapons), "shadowy figures" (undead), "eerie atmosphere" (horror)
-- Focus on: composition, lighting, color palette, atmosphere, character poses, fashion, architecture`
+- If a frame contains disturbing content, use safe cinematic equivalents: "tense confrontation" (violence), "still figures" (bodies), "dramatic shadows" (blood), "mysterious objects" (weapons), "shadowy figures" (undead), "eerie atmosphere" (horror)`
 }
 
 /**
