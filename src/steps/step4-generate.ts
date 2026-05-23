@@ -164,11 +164,11 @@ Return a JSON array with this structure:
 [
   {
     "name": "Character name or short description (e.g. male lead, robot protagonist, animal companion)",
-    "appearance": "English appearance description for SD img2img reference, must include material/texture details",
-    "sd_tags": "SDXL-compatible English tags, comma-separated, must include character type + gender + hair/shape + clothing/accessories + expression style",
+    "appearance": "Detailed English appearance description (3-5 sentences). Include: face/screen type and displayed content, eye color and glow, body material and texture (metallic/organic/fabric), specific clothing items with colors and patterns, accessories, distinguishing marks, overall build and posture. Be as specific as possible.",
+    "sd_tags": "SDXL-compatible English tags, comma-separated, must include character type + gender + hair/shape + clothing/accessories + expression style + material/texture",
     "lora_suggestion": "Recommended LoRA model type name",
     "negative_prompt": "Negative prompt for this character to avoid generating incorrect features",
-    "ai_prompt": "Universal English natural language character description that can be directly used in any AI tool. Use complete sentences describing appearance, material, clothing, and temperament — not tag format"
+    "ai_prompt": "Detailed English character description (3-5 sentences) for any AI tool. Describe exact visual features: face/screen details, eye appearance, body material, specific clothing with colors and patterns, accessories, posture, and overall mood. Be vivid and specific — not generic."
   }
 ]
 
