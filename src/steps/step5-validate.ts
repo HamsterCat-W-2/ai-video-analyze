@@ -10,16 +10,71 @@ import {
 } from "../types"
 import type { GeneratedResult } from "./step4-generate"
 
+const SHOT_TYPE_MAP: Record<string, Shot["shot_type"]> = {
+  "medium shot": "medium",
+  "wide shot": "wide",
+  "close-up shot": "close-up",
+  "close up": "close-up",
+  "closeup": "close-up",
+  "extreme close-up": "extreme-close-up",
+  "extreme close up": "extreme-close-up",
+  "extremecloseup": "extreme-close-up",
+  "medium": "medium",
+  "wide": "wide",
+  "close-up": "close-up",
+  "extreme-close-up": "extreme-close-up",
+  "long shot": "wide",
+  "full shot": "wide",
+  "over-the-shoulder": "medium",
+  "two-shot": "medium",
+  "bird eye": "wide",
+  "aerial": "wide",
+}
+
+const CAMERA_MOTION_MAP: Record<string, Shot["camera_motion"]> = {
+  "static": "static",
+  "push-in": "push-in",
+  "push in": "push-in",
+  "pull-out": "pull-out",
+  "pull out": "pull-out",
+  "pan": "pan",
+  "panning": "pan",
+  "follow": "follow",
+  "following": "follow",
+  "handheld": "handheld",
+  "tracking": "follow",
+  "dolly": "push-in",
+  "zoom in": "push-in",
+  "zoom out": "pull-out",
+}
+
+function normalizeShot(raw: any): Shot {
+  const shotTypeRaw = String(raw.shot_type ?? "").toLowerCase().trim()
+  const shot_type = SHOT_TYPE_MAP[shotTypeRaw] ?? "medium"
+
+  const motionRaw = String(raw.camera_motion ?? "static").toLowerCase().trim()
+  const camera_motion = CAMERA_MOTION_MAP[motionRaw] ?? "static"
+
+  return {
+    index: Number(raw.index) || 0,
+    timestamp: String(raw.timestamp ?? "00:00:00"),
+    shot_type,
+    composition: String(raw.composition ?? ""),
+    lighting: String(raw.lighting ?? ""),
+    camera_motion,
+    sd_prompt: String(raw.sd_prompt ?? ""),
+    ai_prompt: String(raw.ai_prompt ?? ""),
+  }
+}
+
 /**
  * Step 5: 数据校验 + 格式化
- * 用 Zod safeParse 校验每类数据，失败时使用空默认值而非报错
- * 最终组装为完整的 PromptPack 返回
+ * 先标准化 LLM 输出，再用 Zod 校验，失败时使用空默认值而非报错
  */
 export function step5Validate(
   ctx: PipelineContext,
   generated: GeneratedResult
 ): PromptPack {
-  const start = Date.now()
   console.log("[Step 5] 开始数据校验 + 格式化")
 
   // 校验人物列表，格式不符则返回空数组
@@ -38,8 +93,11 @@ export function step5Validate(
     console.warn("[Step 5] 故事数据校验失败，使用默认值:", storyResult.error?.issues)
   }
 
-  // 校验分镜列表，格式不符则返回空数组
-  const shotsResult = ShotSchema.array().safeParse(generated.shots)
+  // 先标准化 shot_type 和 camera_motion，再校验
+  const normalizedShots = Array.isArray(generated.shots)
+    ? generated.shots.map(normalizeShot)
+    : []
+  const shotsResult = ShotSchema.array().safeParse(normalizedShots)
   const shots: Shot[] = shotsResult.success ? shotsResult.data : []
   if (!shotsResult.success) {
     console.warn("[Step 5] 分镜数据校验失败，使用空数组:", shotsResult.error?.issues)

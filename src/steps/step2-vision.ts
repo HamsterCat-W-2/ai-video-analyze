@@ -20,7 +20,15 @@ function buildPrompt(n: number): string {
 
 Use [Frame N] as heading for each frame. Keep it concise — max 2 sentences per item.
 
-DETAIL REQUIREMENT (very important):
+ACCURACY RULES (critical — violation makes the output useless):
+- ONLY describe characters and objects that you can ACTUALLY SEE in each frame. Do NOT guess or infer.
+- Do NOT describe characters that are not present in the frame. Never fabricate people or creatures.
+- You MUST distinguish between: real living beings vs. sculptures/statues/dolls vs. illustrations/pictures on screens/walls.
+- If something is a sculpture, statue, mannequin, or doll, you MUST label it as such (e.g. "a sculpture of a woman", NOT "a woman").
+- If you are unsure whether something is a real person or an object, describe it as an object/statue, not a person.
+- It is far better to describe fewer characters accurately than to describe more characters with fabricated details.
+
+DETAIL REQUIREMENT:
 Your goal is to provide RICH, SPECIFIC visual descriptions that capture every observable detail. For each character, describe:
 - Face/head: type (human face, digital screen, mask, animal head), displayed content (emoticons, text, expressions), eye color and glow
 - Body: material (metal, wood, fabric, skin), texture (smooth, rough, weathered, dusty), visible joints or mechanical parts
@@ -32,10 +40,12 @@ Your goal is to provide RICH, SPECIFIC visual descriptions that capture every ob
 Examples of GOOD descriptions:
 - "A robot with a digital face screen displaying a green smiley emoticon, blue glowing eyes, wearing a brown leather jacket with a red scarf, metallic body with visible bolted joints and weathered dusty surface"
 - "A large ostrich with glossy black body feathers, white neck and head, bloodshot red eyes, wide open yellow beak, standing on long powerful legs"
+- "A sculpture of a woman made of stone, positioned by the poolside"
 
-Examples of BAD descriptions (too vague):
+Examples of BAD descriptions (too vague or hallucinated):
 - "A robot with a glowing mask"
-- "An ostrich"`
+- "An ostrich"
+- "A woman standing by the pool" (when what you see is actually a sculpture or decoration)`
 }
 
 /**

@@ -17,7 +17,8 @@ function cleanJson(text: string): string {
 /** 4A: Generate character prompts */
 async function generateCharacters(visionText: string, transcript: string): Promise<Character[]> {
   try {
-    const response = await client.chat.completions.create({
+    // Step 1: Extract candidate characters
+    const extractResponse = await client.chat.completions.create({
       model: MODEL,
       temperature: TEMPERATURE,
       messages: [
@@ -35,6 +36,7 @@ CRITICAL RULES:
 3. DO NOT hallucinate or infer characters that are not explicitly described in the vision analysis.
 4. If unsure whether something is a character or an object, EXCLUDE it.
 5. Maximum 5 characters. Quality over quantity — fewer, accurate characters are better than many inaccurate ones.
+6. Distinguish between real living beings and sculptures/statues/dolls. A sculpture is NOT a character.
 
 Distinguish human characters from non-human subjects (animals, mechanical beings, etc.).
 Non-human characters MUST include their type label in sd_tags (e.g. robot, animal, creature).
@@ -48,7 +50,7 @@ ${transcript.slice(0, 800)}
 Return a JSON array with this structure:
 [
   {
-    "name": "Character name or short description (e.g. male lead, robot protagonist, animal companion)",
+    "name": "角色名称，使用中文（如：机器人男主角、鸵鸟坐骑、女主角雕塑）",
     "appearance": "Detailed English appearance description (3-5 sentences). Include: face/screen type and displayed content, eye color and glow, body material and texture (metallic/organic/fabric), specific clothing items with colors and patterns, accessories, distinguishing marks, overall build and posture. Be as specific as possible.",
     "sd_tags": "SDXL-compatible English tags, comma-separated, must include character type + gender + hair/shape + clothing/accessories + expression style + material/texture",
     "lora_suggestion": "Recommended LoRA model type name",
@@ -62,8 +64,63 @@ Output only the JSON array, nothing else.`,
       ],
     })
 
-    const content = response.choices[0]?.message?.content ?? "[]"
-    return JSON.parse(cleanJson(content))
+    const rawContent = extractResponse.choices[0]?.message?.content ?? "[]"
+    console.log("[Step 4A] Extract response length:", rawContent.length)
+    const candidates: Character[] = JSON.parse(cleanJson(rawContent))
+
+    if (candidates.length === 0) return []
+
+    // Step 2: Verify each character against the vision text
+    const verifyResponse = await client.chat.completions.create({
+      model: MODEL,
+      temperature: 0.1,
+      messages: [
+        {
+          role: "system",
+          content: "You are a careful fact-checker. Return only a valid JSON array with no markdown code fences or extra text.",
+        },
+        {
+          role: "user",
+          content: `I have a list of characters extracted from video frame analysis. Verify each character's existence.
+
+Vision analysis:
+${visionText}
+
+Characters to verify:
+${JSON.stringify(candidates, null, 2)}
+
+For EACH character, apply these STRICT verification rules:
+
+CHECK 1 — Sculpture/Statue Detection:
+- If the character's own description mentions "sculpture", "statue", "doll", "mannequin", "sometimes depicted as", "not clearly visible", or "face not visible" — this is likely a non-living object. REMOVE it.
+- If the vision text describes this subject as a sculpture, statue, doll, mannequin, decoration, or illustration — REMOVE it.
+
+CHECK 2 — Face Visibility:
+- A real living character must have a clearly visible face with identifiable features (eyes, expression, etc.)
+- If the character description says "face not clearly visible", "face not visible", or lacks any facial description — this strongly suggests a statue/mannequin/sculpture. REMOVE it.
+
+CHECK 3 — Specificity:
+- The character must have at least 2 unique identifying features (e.g., "metallic body with bolted joints AND blue glowing eyes AND brown leather jacket")
+- If the description is generic with no unique features, REMOVE it.
+
+CHECK 4 — Frame Count:
+- The character or character type must appear in 2+ frames
+- Group types (zombies, soldiers, crowd) count as valid if the type appears in 2+ frames
+
+A character passes ALL checks only if it is clearly a living being with visible facial features and specific details.
+
+Return the filtered JSON array. If ALL characters fail, return [].
+
+Output only the JSON array, nothing else.`,
+        },
+      ],
+    })
+
+    const verifyContent = verifyResponse.choices[0]?.message?.content ?? "[]"
+    console.log("[Step 4A] Verify response length:", verifyContent.length)
+    const verified: Character[] = JSON.parse(cleanJson(verifyContent))
+    console.log(`[Step 4A] Characters: ${candidates.length} candidates → ${verified.length} verified`)
+    return verified
   } catch (err) {
     console.error("[Step 4A] Character prompt generation failed:", err)
     return []
@@ -125,6 +182,7 @@ async function generateShots(visionText: string): Promise<Shot[]> {
     const response = await client.chat.completions.create({
       model: MODEL,
       temperature: TEMPERATURE,
+      max_tokens: 8000,
       messages: [
         {
           role: "system",
@@ -132,7 +190,7 @@ async function generateShots(visionText: string): Promise<Shot[]> {
         },
         {
           role: "user",
-          content: `Extract key storyboard shots from the following video frame analysis. Output up to 20 scenes.
+          content: `Extract EXACTLY 20 key storyboard shots from the following video frame analysis. You MUST output 20 shots, covering the ENTIRE video from beginning to end. Do not stop early.
 
 Vision analysis:
 ${visionText}
@@ -140,23 +198,25 @@ ${visionText}
 Return a JSON array with this structure for each shot:
 [
   {
-    "index": "Sequential number starting from 1",
-    "timestamp": "Estimated timestamp in HH:MM:SS format",
-    "shot_type": "close-up or medium or wide or extreme-close-up",
-    "composition": "Composition description, e.g. rule of thirds / centered / symmetrical",
-    "lighting": "Lighting description, e.g. warm side lighting / cold backlight",
-    "camera_motion": "static or push-in or pull-out or pan or follow or handheld",
+    "index": 1,
+    "timestamp": "00:00:05",
+    "shot_type": "close-up",
+    "composition": "rule of thirds / centered / symmetrical",
+    "lighting": "warm side lighting / cold backlight",
+    "camera_motion": "static",
     "sd_prompt": "Complete English Stable Diffusion prompt with quality words, style words, scene words, comma-separated",
     "ai_prompt": "Universal English natural language scene description that can be directly used in any AI tool (SD/MidJourney/DALL-E/Sora etc.). Use complete fluent sentences describing character appearance, actions, scene environment, lighting and atmosphere — not tag format"
   }
 ]
 
-Output only the JSON array, nothing else.`,
+CRITICAL: Output EXACTLY 20 shots. index must be a number, not a string. Spread timestamps evenly across the full video duration. Output only the JSON array, nothing else.`,
         },
       ],
     })
 
     const content = response.choices[0]?.message?.content ?? "[]"
+    console.log("[Step 4C] Raw response length:", content.length)
+    console.log("[Step 4C] Raw response preview:", content.slice(0, 500))
     return JSON.parse(cleanJson(content))
   } catch (err) {
     console.error("[Step 4C] Shot prompt generation failed:", err)
