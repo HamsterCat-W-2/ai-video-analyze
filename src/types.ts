@@ -6,6 +6,16 @@ export const CharacterSchema = z.object({
   appearance: z.string(),
   sd_tags: z.string(),
   lora_suggestion: z.string(),
+  /** 角色设定稿完整提示词（GPT-Image-2 高稳定性格式） */
+  gpt_image_prompt: z.string(),
+  /** 色板 */
+  color_palette: z.array(z.string()),
+  /** 光影描述 */
+  lighting: z.string(),
+  /** 推荐视图列表 */
+  reference_views: z.array(z.string()),
+  /** 负面提示词 */
+  negative_prompt: z.string(),
 })
 
 /** 分镜 */
