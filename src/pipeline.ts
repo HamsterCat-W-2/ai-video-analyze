@@ -1,5 +1,4 @@
 import * as fs from "fs"
-import * as path from "path"
 import * as crypto from "crypto"
 import type { PipelineContext, PromptPack } from "./types"
 import { step1Extract } from "./steps/step1-extract"
@@ -17,7 +16,6 @@ function initContext(videoPath: string): PipelineContext {
     audioPath: "",
     visionText: "",
     transcript: "",
-    duration: 0,
     startTime: Date.now(),
   }
 }
@@ -43,14 +41,13 @@ export async function runPipeline(videoPath: string): Promise<PromptPack> {
   const ctx = initContext(videoPath)
 
   try {
-    // Step 1：抽帧（串行，后续步骤依赖产物）
+    // Step 1：抽帧（串行）
     const extracted = await step1Extract(ctx.videoPath)
     ctx.tmpDir = extracted.tmpDir
     ctx.frames = extracted.frames
     ctx.audioPath = extracted.audioPath
-    ctx.duration = extracted.duration
 
-    // Step 2 + Step 3：并行执行（视觉分析 和 语音转录 互相独立）
+    // Step 2 + 3：并行（视觉 和 转录 互相独立）
     const [visionText, transcript] = await Promise.all([
       step2Vision(ctx.frames),
       step3Transcribe(ctx.audioPath),
@@ -58,13 +55,12 @@ export async function runPipeline(videoPath: string): Promise<PromptPack> {
     ctx.visionText = visionText
     ctx.transcript = transcript
 
-    // Step 4：并行生成三类提示词（互相独立）
+    // Step 4：并行生成三类提示词
     const generated = await step4Generate(ctx.visionText, ctx.transcript)
 
     // Step 5：校验 + 格式化
-    const result = step5Validate(ctx, generated)
+    return step5Validate(ctx, generated)
 
-    return result
   } finally {
     await cleanup(ctx.tmpDir, ctx.videoPath)
   }

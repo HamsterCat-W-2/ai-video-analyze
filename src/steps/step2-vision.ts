@@ -1,61 +1,22 @@
-import OpenAI from "openai"
 import * as fs from "fs"
+import { visionClient, MODELS } from "../clients"
 
-// 使用 OpenAI SDK 兼容模式调用阿里云百炼 Qwen2.5-VL
-const client = new OpenAI({
-  baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-  apiKey: process.env.DASHSCOPE_API_KEY,
-})
+const BATCH_SIZE = 10
+const MAX_CONCURRENT = 3
 
-const BATCH_SIZE = 10       // 每批处理 10 帧
-const MAX_CONCURRENT = 3    // 最多 3 批并发，避免触发 429 限流
-
-/** 构造视觉分析的提示词 */
 function buildPrompt(n: number): string {
-  return `Analyze these ${n} frames in chronological order. For each frame, describe:
-1. Characters: All subjects visible in the frame. Distinguish humans from non-humans (animals, mechanical beings, sculptures, dolls, etc.). Non-human subjects must be clearly labeled by type.
-2. Scene: Location type, background environment, time/atmosphere, color palette
-3. Shot: Framing (close-up / medium / wide / extreme close-up), composition, lighting direction and quality
-4. Camera movement: static / push-in / pull-out / pan / follow / handheld (infer from adjacent frames)
+  return `按时间顺序分析这 ${n} 帧画面，对每帧依次描述：
+1. 人物：外貌特征（发色、发型、面部）、服装（颜色、款式）、表情
+2. 场景：地点类型、背景环境、时间氛围、色调
+3. 镜头：景别（特写/近景/中景/全景/远景）、构图方式、光线方向与质感
+4. 运镜：静止 / 推进 / 拉远 / 摇移 / 跟拍（根据相邻帧推断）
 
-Use [Frame N] as heading for each frame. Keep it concise — max 2 sentences per item.
-
-ACCURACY RULES (critical — violation makes the output useless):
-- ONLY describe characters and objects that you can ACTUALLY SEE in each frame. Do NOT guess or infer.
-- Do NOT describe characters that are not present in the frame. Never fabricate people or creatures.
-- You MUST distinguish between: real living beings vs. sculptures/statues/dolls vs. illustrations/pictures on screens/walls.
-- If something is a sculpture, statue, mannequin, or doll, you MUST label it as such (e.g. "a sculpture of a woman", NOT "a woman").
-- If you are unsure whether something is a real person or an object, describe it as an object/statue, not a person.
-- It is far better to describe fewer characters accurately than to describe more characters with fabricated details.
-
-DETAIL REQUIREMENT:
-Your goal is to provide RICH, SPECIFIC visual descriptions that capture every observable detail. For each character, describe:
-- Face/head: type (human face, digital screen, mask, animal head), displayed content (emoticons, text, expressions), eye color and glow
-- Body: material (metal, wood, fabric, skin), texture (smooth, rough, weathered, dusty), visible joints or mechanical parts
-- Clothing: exact items (jacket, hat, scarf, dress), colors, patterns (polka dot, striped), condition (torn, clean, dirty)
-- Accessories: glasses, weapons as props, bags, jewelry — describe shape, color, position
-- Pose/posture: standing, sitting, running, crouching, facing camera, back turned
-- Unique identifiers: scars, markings, screens, glowing elements, distinctive features
-
-Examples of GOOD descriptions:
-- "A robot with a digital face screen displaying a green smiley emoticon, blue glowing eyes, wearing a brown leather jacket with a red scarf, metallic body with visible bolted joints and weathered dusty surface"
-- "A large ostrich with glossy black body feathers, white neck and head, bloodshot red eyes, wide open yellow beak, standing on long powerful legs"
-- "A sculpture of a woman made of stone, positioned by the poolside"
-
-Examples of BAD descriptions (too vague or hallucinated):
-- "A robot with a glowing mask"
-- "An ostrich"
-- "A woman standing by the pool" (when what you see is actually a sculpture or decoration)`
+每帧用 [Frame N] 作为标题，内容简洁，每项不超过2句。`
 }
 
-/**
- * 分析一批帧图片
- * 将图片读取为 base64，与提示词一起发送给 Qwen2.5-VL-72B
- */
 async function analyzeBatch(batchFrames: string[]): Promise<string> {
   const content: any[] = []
 
-  // 将每张帧图片转为 base64 格式
   for (let i = 0; i < batchFrames.length; i++) {
     const buffer = await fs.promises.readFile(batchFrames[i])
     const base64 = buffer.toString("base64")
@@ -65,14 +26,13 @@ async function analyzeBatch(batchFrames: string[]): Promise<string> {
     })
   }
 
-  // 提示词放在图片列表前面
   content.unshift({
     type: "text",
     text: buildPrompt(batchFrames.length),
   })
 
-  const response = await client.chat.completions.create({
-    model: "qwen2.5-vl-72b-instruct",
+  const response = await visionClient.chat.completions.create({
+    model: MODELS.vision,
     max_tokens: 2000,
     messages: [{ role: "user", content }],
   })
@@ -80,35 +40,25 @@ async function analyzeBatch(batchFrames: string[]): Promise<string> {
   return response.choices[0]?.message?.content ?? ""
 }
 
-/**
- * Step 2: 视觉分析
- * 将帧按批次分组，控制并发调用 Qwen2.5-VL-72B，拼接所有批次结果
- */
 export async function step2Vision(frames: string[]): Promise<string> {
   const start = Date.now()
-  console.log(`[Step 2] 开始视觉分析，共 ${frames.length} 帧`)
+  console.log(`[Step 2][${MODELS.vision}] 开始视觉分析，共 ${frames.length} 帧`)
 
-  // 将帧列表按 BATCH_SIZE 分组
   const batches: string[][] = []
   for (let i = 0; i < frames.length; i += BATCH_SIZE) {
     batches.push(frames.slice(i, i + BATCH_SIZE))
   }
-  console.log(`[Step 2] 分为 ${batches.length} 批，每批最多 ${BATCH_SIZE} 帧，并发上限 ${MAX_CONCURRENT}`)
 
-  // 按 MAX_CONCURRENT 控制并发，每轮最多同时请求 3 批
   const results: string[] = []
   for (let i = 0; i < batches.length; i += MAX_CONCURRENT) {
     const chunk = batches.slice(i, i + MAX_CONCURRENT)
-    const round = Math.floor(i / MAX_CONCURRENT) + 1
-    console.log(`[Step 2] 第 ${round} 轮：处理批次 ${i + 1}-${Math.min(i + MAX_CONCURRENT, batches.length)}`)
     const chunkResults = await Promise.all(
       chunk.map((batch) => analyzeBatch(batch))
     )
     results.push(...chunkResults)
   }
 
-  // 所有批次用分隔线拼接
   const visionText = results.join("\n\n---\n\n")
-  console.log(`[Step 2] 完成：${batches.length} 批分析结果, 文本长度 ${visionText.length} 字符, 耗时 ${Date.now() - start}ms`)
+  console.log(`[Step 2][${MODELS.vision}] 完成：${batches.length} 批, ${visionText.length} 字符, 耗时 ${Date.now() - start}ms ...done`)
   return visionText
 }

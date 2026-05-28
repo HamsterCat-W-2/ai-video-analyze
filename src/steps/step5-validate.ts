@@ -9,6 +9,7 @@ import {
   type PipelineContext,
 } from "../types"
 import type { GeneratedResult } from "./step4-generate"
+import { MODELS } from "../clients"
 
 const SHOT_TYPE_MAP: Record<string, Shot["shot_type"]> = {
   "medium shot": "medium",
@@ -63,28 +64,21 @@ function normalizeShot(raw: any): Shot {
     lighting: String(raw.lighting ?? ""),
     camera_motion,
     sd_prompt: String(raw.sd_prompt ?? ""),
-    ai_prompt: String(raw.ai_prompt ?? ""),
   }
 }
 
-/**
- * Step 5: 数据校验 + 格式化
- * 先标准化 LLM 输出，再用 Zod 校验，失败时使用空默认值而非报错
- */
 export function step5Validate(
   ctx: PipelineContext,
   generated: GeneratedResult
 ): PromptPack {
   console.log("[Step 5] 开始数据校验 + 格式化")
 
-  // 校验人物列表，格式不符则返回空数组
   const charactersResult = CharacterSchema.array().safeParse(generated.characters)
   const characters: Character[] = charactersResult.success ? charactersResult.data : []
   if (!charactersResult.success) {
     console.warn("[Step 5] 人物数据校验失败，使用空数组:", charactersResult.error?.issues)
   }
 
-  // 校验故事设定，格式不符则返回空默认值
   const storyResult = StorySchema.safeParse(generated.story)
   const story: Story = storyResult.success
     ? storyResult.data
@@ -93,7 +87,6 @@ export function step5Validate(
     console.warn("[Step 5] 故事数据校验失败，使用默认值:", storyResult.error?.issues)
   }
 
-  // 先标准化 shot_type 和 camera_motion，再校验
   const normalizedShots = Array.isArray(generated.shots)
     ? generated.shots.map(normalizeShot)
     : []
@@ -103,15 +96,17 @@ export function step5Validate(
     console.warn("[Step 5] 分镜数据校验失败，使用空数组:", shotsResult.error?.issues)
   }
 
-  // 组装最终结果，补充元数据
   const totalTime = Date.now() - ctx.startTime
   const result: PromptPack = {
     video_id: ctx.videoId,
-    duration_seconds: ctx.duration,
     characters,
     story,
     shots,
-    master_prompt: generated.master_prompt ?? "",
+    models_used: {
+      vision: MODELS.vision,
+      asr: MODELS.asr,
+      llm: MODELS.llm,
+    },
     processing_time_ms: totalTime,
   }
 
